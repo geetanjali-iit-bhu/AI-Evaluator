@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamForge — AI Question Paper Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0f11;
+  --surface: #16181c;
+  --surface2: #1e2026;
+  --border: #2a2d35;
+  --border2: #363a45;
+  --accent: #e8d5a3;
+  --accent2: #c4a96b;
+  --text: #f0ede8;
+  --text2: #9a9aa8;
+  --text3: #5c5c6e;
+  --green: #4ade80;
+  --green-bg: #0d2318;
+  --red: #f87171;
+  --red-bg: #2a0d0d;
+  --blue: #60a5fa;
+  --blue-bg: #0d1a2e;
+  --amber: #fbbf24;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(232,213,163,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232,213,163,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── LEFT PANEL ── */
+.panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.brand {
+  padding: 28px 28px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.section {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text3);
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+/* Topic input */
+.topic-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s;
+}
+.topic-input:focus { border-color: var(--accent2); }
+.topic-input::placeholder { color: var(--text3); }
+
+/* Difficulty */
+.diff-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.diff-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.diff-btn:hover { border-color: var(--border) }
+.diff-btn.active-easy { background: var(--green-bg); border-color: var(--green); }
+.diff-btn.active-medium { background: #1a1500; border-color: var(--amber); }
+.diff-btn.active-hard { background: var(--red-bg); border-color: var(--red); }
+.diff-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.diff-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+.diff-btn.active-easy .diff-name { color: var(--green); }
+.diff-btn.active-medium .diff-name { color: var(--amber); }
+.diff-btn.active-hard .diff-name { color: var(--red); }
+
+/* Qty controls */
+.qty-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.qty-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.qty-info { flex: 1; }
+.qty-title { font-size: 13px; color: var(--text); font-weight: 500; }
+.qty-mark { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.qty-ctrl { display: flex; align-items: center; gap: 10px; }
+.qty-btn {
+  width: 26px; height: 26px;
+  background: var(--border);
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+  transition: background .15s;
+}
+.qty-btn:hover { background: var(--border2); }
+.qty-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  min-width: 22px;
+  text-align: center;
+}
+
+/* Rubric */
+.rubric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.rubric-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: all .2s;
+  user-select: none;
+}
+.rubric-chip:hover { border-color: var(--border2); }
+.rubric-chip.on {
+  background: #1a1628;
+  border-color: #7c5fd4;
+}
+.chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  margin-bottom: 6px;
+  transition: background .2s;
+}
+.rubric-chip.on .chip-dot { background: #a78bfa; }
+.chip-title { font-size: 11px; font-weight: 600; color: var(--text2); line-height: 1.3; }
+.rubric-chip.on .chip-title { color: #c4b5fd; }
+
+/* Marks summary */
+.marks-bar {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.marks-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.marks-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.marks-breakdown {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* Generate button */
+.gen-wrap { padding: 20px 28px; }
+.gen-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e0f11;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: -.01em;
+}
+.gen-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+.gen-btn:active { transform: translateY(0); }
+.gen-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.spin {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── RIGHT PANEL ── */
+.output {
+  padding: 40px 48px;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.output-header {
+  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.output-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 32px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.output-meta {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 6px;
+  font-family: 'DM Mono', monospace;
+}
+
+.copy-btn {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.copy-btn:hover { border-color: var(--accent2); color: var(--accent); }
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 70vh;
+  text-align: center;
+  gap: 16px;
+}
+.empty-icon {
+  font-size: 48px;
+  opacity: .15;
+  font-family: 'DM Serif Display', serif;
+  color: var(--accent);
+  line-height: 1;
+}
+.empty-text { font-size: 15px; color: var(--text3); line-height: 1.6; }
+
+/* Paper display */
+.paper-wrap { display: none; }
+.paper-wrap.visible { display: block; }
+
+.paper-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.paper-top {
+  background: linear-gradient(135deg, #1a1300 0%, #1e1a08 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.paper-topic {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.paper-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.badge-easy { background: var(--green-bg); color: var(--green); border: 1px solid #1a4d2a; }
+.badge-medium { background: #1a1500; color: var(--amber); border: 1px solid #3d3000; }
+.badge-hard { background: var(--red-bg); color: var(--red); border: 1px solid #4d1a1a; }
+.badge-marks { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+
+.total-box { text-align: right; }
+.total-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+.total-num { font-family: 'DM Mono', monospace; font-size: 32px; color: var(--accent); font-weight: 500; line-height: 1.1; }
+.total-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* Rubric display */
+.rubric-bar {
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.rubric-bar-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.rubric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.rubric-pill {
+  background: #1a1628;
+  border: 1px solid #4a3d8a;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #c4b5fd;
+  font-weight: 500;
+}
+
+/* Sections */
+.section-block {
+  border-bottom: 1px solid var(--border);
+}
+.section-block:last-child { border-bottom: none; }
+
+.section-header {
+  padding: 18px 32px;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+.section-header:hover { background: #1c1f26; }
+
+.section-letter {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.letter-a { background: #0d2318; color: var(--green); }
+.letter-b { background: #1a1500; color: var(--amber); }
+.letter-c { background: var(--blue-bg); color: var(--blue); }
+
+.section-info { flex: 1; }
+.section-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.section-desc { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.section-chevron { color: var(--text3); font-size: 12px; transition: transform .2s; }
+.section-chevron.open { transform: rotate(180deg); }
+
+.questions-list {
+  padding: 0 32px 20px;
+}
+
+.q-item {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.q-item:last-child { border-bottom: none; }
+
+.q-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.q-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  min-width: 28px;
+  padding-top: 2px;
+}
+.q-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* MCQ options */
+.mcq-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0 10px 40px;
+}
+.opt {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  display: flex;
+  gap: 8px;
+}
+.opt.correct {
+  background: var(--green-bg);
+  border-color: #1a4d2a;
+  color: var(--green);
+}
+.opt-letter {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.answer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 40px;
+}
+.answer-tag {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid #1a4d2a;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-weight: 500;
+}
+
+/* Marks badge inline */
+.marks-tag {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  background: var(--surface2);
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+/* Marking scheme */
+.scheme {
+  margin: 12px 0 0 40px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.scheme-header {
+  padding: 8px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.scheme-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.scheme-row:last-child { border-bottom: none; }
+.scheme-criterion { color: var(--text2); }
+.scheme-pts {
+  font-family: 'DM Mono', monospace;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Loading */
+.loading-overlay {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 16px;
+}
+.loading-overlay.visible { display: flex; }
+.loader-ring {
+  width: 40px; height: 40px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+.loader-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all .3s;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .panel { position: static; height: auto; }
+  .output { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- LEFT: Config Panel -->
+  <aside class="panel">
+    <div class="brand">
+      <div class="brand-name">ExamForge</div>
+      <div class="brand-sub">AI Question Paper Generator</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Topic</div>
+      <input class="topic-input" id="topic" type="text"
+        value="Data Structures and Algorithms"
+        placeholder="e.g. Binary Search Trees, Sorting Algorithms…" />
+    </div>
+
+    <div class="section">
+      <div class="section-label">Difficulty Level</div>
+      <div class="diff-row">
+        <div class="diff-btn" id="d-easy" onclick="setDiff('easy')">
+          <div class="diff-name">Easy</div>
+          <div class="diff-sub">Recall</div>
+        </div>
+        <div class="diff-btn active-medium" id="d-medium" onclick="setDiff('medium')">
+          <div class="diff-name">Medium</div>
+          <div class="diff-sub">Apply</div>
+        </div>
+        <div class="diff-btn" id="d-hard" onclick="setDiff('hard')">
+          <div class="diff-name">Hard</div>
+          <div class="diff-sub">Analyse</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Question Count</div>
+      <div class="qty-grid">
+        <div class="qty-row-item">
+          <div class="qty-info">
+            <div class="qty-title">MCQ</div>
+            <div class="qty-mark">1 mark each</div>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="adj('mcq',-1)">−</button>
+            <span class="qty-num" id="v-mcq">5</span>
+            <button class="qty-btn" onclick="adj('mcq',1)">+</button>
+          </div>
+        </div>
+        <div class="qty-row-item">
+          <div class="qty-info">
+            <div class="qty-title">Short Answer</div>
+            <div class="qty-mark">5 marks each</div>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="adj('short',-1)">−</button>
+            <span class="qty-num" id="v-short">3</span>
+            <button class="qty-btn" onclick="adj('short',1)">+</button>
+          </div>
+        </div>
+        <div class="qty-row-item">
+          <div class="qty-info">
+            <div class="qty-title">Long Answer</div>
+            <div class="qty-mark">10 marks each</div>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="adj('long',-1)">−</button>
+            <span class="qty-num" id="v-long">2</span>
+            <button class="qty-btn" onclick="adj('long',1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">IIT-Style Rubric Criteria</div>
+      <div class="rubric-grid" id="rubric-grid"></div>
+    </div>
+
+    <div class="section">
+      <div class="marks-bar">
+        <div>
+          <div class="marks-label">Total Marks</div>
+          <div class="marks-breakdown" id="marks-breakdown">5×1 + 3×5 + 2×10 = 40</div>
+        </div>
+        <div class="marks-num" id="total-marks">40</div>
+      </div>
+    </div>
+
+    <div class="gen-wrap">
+      <button class="gen-btn" id="gen-btn" onclick="generate()">
+        <div class="spin" id="spin"></div>
+        <span id="gen-label">Generate Paper</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Output -->
+  <main class="output">
+    <div id="empty-state" class="empty">
+      <div class="empty-icon">∑</div>
+      <div class="empty-text">Configure your paper on the left<br>and hit <strong style="color:var(--accent)">Generate Paper</strong> to begin</div>
+    </div>
+
+    <div id="loading-state" class="loading-overlay">
+      <div class="loader-ring"></div>
+      <div class="loader-text" id="loader-msg">Retrieving context from notes…</div>
+    </div>
+
+    <div id="paper-output" class="paper-wrap"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const RUBRICS = [
+  { id:'conceptual',  label:'Conceptual clarity',   scheme:[['Definition precision','2'],['Theoretical depth','3']] },
+  { id:'application', label:'Application ability',   scheme:[['Problem setup','2'],['Correct solution','3']] },
+  { id:'complexity',  label:'Time/space complexity',  scheme:[['Correct Big-O','3'],['Justification','2']] },
+  { id:'tracing',     label:'Algorithm tracing',      scheme:[['Each step shown','3'],['Correct final state','2']] },
+  { id:'design',      label:'Algorithm design',       scheme:[['Pseudocode correctness','4'],['Edge cases','3'],['Efficiency','3']] },
+  { id:'comparison',  label:'Comparative analysis',   scheme:[['Both approaches described','3'],['Justified choice','4'],['Complexity comparison','3']] },
+  { id:'edge',        label:'Edge case handling',     scheme:[['Case identification','3'],['Handling logic','4'],['Explanation','3']] },
+  { id:'proof',       label:'Correctness proof',      scheme:[['Invariant stated','3'],['Proof sketch','4'],['Base case','3']] },
+];
+
+let diff = 'medium';
+let vals = { mcq:5, short:3, long:2 };
+let active = new Set(['conceptual','application','complexity']);
+
+function setDiff(d) {
+  diff = d;
+  ['easy','medium','hard'].forEach(x => {
+    const b = document.getElementById('d-'+x);
+    b.className = 'diff-btn' + (x===d ? ' active-'+x : '');
+  });
+  updateMarks();
+}
+
+function adj(k, delta) {
+  vals[k] = Math.max(0, Math.min(20, vals[k]+delta));
+  document.getElementById('v-'+k).textContent = vals[k];
+  updateMarks();
+}
+
+function updateMarks() {
+  const total = vals.mcq*1 + vals.short*5 + vals.long*10;
+  document.getElementById('total-marks').textContent = total;
+  document.getElementById('marks-breakdown').textContent =
+    `${vals.mcq}×1 + ${vals.short}×5 + ${vals.long}×10 = ${total}`;
+}
+
+function buildRubric() {
+  document.getElementById('rubric-grid').innerHTML = RUBRICS.map(r => `
+    <div class="rubric-chip ${active.has(r.id)?'on':''}" id="rc-${r.id}" onclick="toggleRubric('${r.id}')">
+      <div class="chip-dot"></div>
+      <div class="chip-title">${r.label}</div>
+    </div>
+  `).join('');
+}
+
+function toggleRubric(id) {
+  if (active.has(id)) active.delete(id); else active.add(id);
+  const el = document.getElementById('rc-'+id);
+  el.className = 'rubric-chip' + (active.has(id) ? ' on' : '');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+const LOADER_MSGS = [
+  'Retrieving context from notes…',
+  'Building IIT-style prompt…',
+  'Generating questions via LLM…',
+  'Structuring marking scheme…',
+];
+let loaderIdx = 0, loaderTimer = null;
+
+function startLoader() {
+  loaderIdx = 0;
+  document.getElementById('loader-msg').textContent = LOADER_MSGS[0];
+  loaderTimer = setInterval(() => {
+    loaderIdx = (loaderIdx+1) % LOADER_MSGS.length;
+    document.getElementById('loader-msg').textContent = LOADER_MSGS[loaderIdx];
+  }, 2000);
+}
+
+function stopLoader() { clearInterval(loaderTimer); }
+
+/* ── PAPER RENDERING ── */
+function renderPaper(data) {
+  const total = vals.mcq*1 + vals.short*5 + vals.long*10;
+  const diffColors = { easy:'badge-easy', medium:'badge-medium', hard:'badge-hard' };
+  const activeRubrics = RUBRICS.filter(r => active.has(r.id));
+
+  const rubricPills = activeRubrics.map(r =>
+    `<span class="rubric-pill">${r.label}</span>`
+  ).join('');
+
+  // Build sections
+  const sectionA = renderMCQ(data.mcq, data.answers);
+  const sectionB = renderShort(data.short, vals.mcq);
+  const sectionC = renderLong(data.long, vals.mcq + vals.short, activeRubrics);
+
+  document.getElementById('paper-output').innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px">
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);letter-spacing:-.02em;line-height:1.2">${data.topic}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;font-family:'DM Mono',monospace">Generated ${new Date().toLocaleString()}</div>
+      </div>
+      <button class="copy-btn" onclick="copyPaper()">Copy as text</button>
+    </div>
+
+    <div class="paper-card">
+      <div class="paper-top">
+        <div>
+          <div class="paper-topic">${data.topic}</div>
+          <div class="paper-badges">
+            <span class="badge ${diffColors[diff]}">${diff}</span>
+            <span class="badge badge-marks">${vals.mcq} MCQ · ${vals.short} Short · ${vals.long} Long</span>
+          </div>
+        </div>
+        <div class="total-box">
+          <div class="total-label">Total</div>
+          <div class="total-num">${total}</div>
+          <div class="total-sub">marks</div>
+        </div>
+      </div>
+
+      <div class="rubric-bar">
+        <div class="rubric-bar-label">Rubric criteria applied</div>
+        <div class="rubric-pills">${rubricPills || '<span style="font-size:12px;color:var(--text3)">None selected</span>'}</div>
+      </div>
+
+      <!-- Section A -->
+      <div class="section-block">
+        <div class="section-header" onclick="toggleSection('a')">
+          <div class="section-letter letter-a">A</div>
+          <div class="section-info">
+            <div class="section-name">Multiple Choice Questions</div>
+            <div class="section-desc">${vals.mcq} questions × 1 mark = ${vals.mcq} marks</div>
+          </div>
+          <div class="section-chevron open" id="chev-a">▾</div>
+        </div>
+        <div id="sec-a" class="questions-list">${sectionA}</div>
+      </div>
+
+      <!-- Section B -->
+      <div class="section-block">
+        <div class="section-header" onclick="toggleSection('b')">
+          <div class="section-letter letter-b">B</div>
+          <div class="section-info">
+            <div class="section-name">Short Answer Questions</div>
+            <div class="section-desc">${vals.short} questions × 5 marks = ${vals.short*5} marks</div>
+          </div>
+          <div class="section-chevron open" id="chev-b">▾</div>
+        </div>
+        <div id="sec-b" class="questions-list">${sectionB}</div>
+      </div>
+
+      <!-- Section C -->
+      <div class="section-block">
+        <div class="section-header" onclick="toggleSection('c')">
+          <div class="section-letter letter-c">C</div>
+          <div class="section-info">
+            <div class="section-name">Long Answer / Essay Questions</div>
+            <div class="section-desc">${vals.long} questions × 10 marks = ${vals.long*10} marks</div>
+          </div>
+          <div class="section-chevron open" id="chev-c">▾</div>
+        </div>
+        <div id="sec-c" class="questions-list">${sectionC}</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('paper-output').classList.add('visible');
+}
+
+function renderMCQ(questions, answers) {
+  if (!questions || !questions.length) return '<p style="color:var(--text3);font-size:13px;padding:16px 0">No MCQs generated.</p>';
+  return questions.map((q, i) => {
+    const ans = answers && answers[i] ? answers[i] : '';
+    const opts = ['a','b','c','d'];
+    const optHtml = opts.map(o => {
+      const isCorrect = ans.toLowerCase() === o;
+      return `<div class="opt ${isCorrect?'correct':''}">
+        <span class="opt-letter">(${o})</span>
+        <span>${q.options && q.options[o] ? q.options[o] : '—'}</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="q-item">
+        <div class="q-top">
+          <span class="q-num">Q${i+1}.</span>
+          <span class="q-text">${q.text}</span>
+          <span class="marks-tag">1 mark</span>
+        </div>
+        <div class="mcq-opts">${optHtml}</div>
+        <div class="answer-row"><span class="answer-tag">Answer: (${ans || '?'})</span></div>
+      </div>`;
+  }).join('');
+}
+
+function renderShort(questions, offset) {
+  if (!questions || !questions.length) return '<p style="color:var(--text3);font-size:13px;padding:16px 0">No short answer questions generated.</p>';
+  return questions.map((q, i) => `
+    <div class="q-item">
+      <div class="q-top">
+        <span class="q-num">Q${offset+i+1}.</span>
+        <span class="q-text">${q.text}</span>
+        <span class="marks-tag">5 marks</span>
+      </div>
+      ${q.scheme ? `
+      <div class="scheme">
+        <div class="scheme-header">Marking Scheme</div>
+        ${q.scheme.map(([c,p]) => `
+          <div class="scheme-row">
+            <span class="scheme-criterion">${c}</span>
+            <span class="scheme-pts">${p} pts</span>
+          </div>`).join('')}
+      </div>` : ''}
+    </div>`).join('');
+}
+
+function renderLong(questions, offset, rubrics) {
+  if (!questions || !questions.length) return '<p style="color:var(--text3);font-size:13px;padding:16px 0">No long answer questions generated.</p>';
+  return questions.map((q, i) => {
+    const scheme = q.scheme || (rubrics.length > 0
+      ? rubrics[i % rubrics.length].scheme.map(([c,p]) => [c, p])
+      : [['Answer quality','5'],['Depth of explanation','3'],['Examples given','2']]);
+    return `
+    <div class="q-item">
+      <div class="q-top">
+        <span class="q-num">Q${offset+i+1}.</span>
+        <span class="q-text">${q.text}</span>
+        <span class="marks-tag">10 marks</span>
+      </div>
+      <div class="scheme">
+        <div class="scheme-header">Marking Scheme</div>
+        ${scheme.map(([c,p]) => `
+          <div class="scheme-row">
+            <span class="scheme-criterion">${c}</span>
+            <span class="scheme-pts">${p} pts</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSection(id) {
+  const sec = document.getElementById('sec-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const hidden = sec.style.display === 'none';
+  sec.style.display = hidden ? '' : 'none';
+  chev.classList.toggle('open', hidden);
+}
+
+/* ── MOCK DATA (replace with real API call) ── */
+function mockGenerate() {
+  const topic = document.getElementById('topic').value || 'Data Structures and Algorithms';
+  return {
+    topic,
+    mcq: [
+      { text: 'What is the time complexity of searching in a balanced Binary Search Tree?', options:{a:'O(n)',b:'O(log n)',c:'O(1)',d:'O(n²)'} },
+      { text: 'Which traversal of a BST gives nodes in sorted order?', options:{a:'Pre-order',b:'Post-order',c:'In-order',d:'Level-order'} },
+      { text: 'What is the worst-case height of a BST with n nodes?', options:{a:'log n',b:'n/2',c:'n',d:'√n'} },
+      { text: 'Which data structure uses LIFO principle?', options:{a:'Queue',b:'Stack',c:'Heap',d:'Tree'} },
+      { text: 'What does ADT stand for?', options:{a:'Abstract Data Type',b:'Advanced Data Tree',c:'Allocated Data Token',d:'Asynchronous Data Transfer'} },
+    ].slice(0, vals.mcq),
+    answers: ['b','c','c','b','a'],
+    short: [
+      { text: 'Explain the concept of an Abstract Data Type (ADT) and how it differs from a concrete data structure. Provide one example.', scheme:[['ADT definition','2'],['Difference explained','2'],['Example given','1']] },
+      { text: 'What is the difference between O-notation and θ-notation? When would you use each?', scheme:[['O-notation defined','2'],['θ-notation defined','2'],['Correct usage context','1']] },
+      { text: 'Describe the process of adding an element to the front of a linked list.', scheme:[['Steps listed in order','3'],['Pointer updates correct','2']] },
+    ].slice(0, vals.short),
+    long: [
+      { text: 'Discuss the importance of Abstract Data Types in software design. Explain with reference to the Queue ADT — define its operations, give a practical application, and analyse the time complexity of each operation.', scheme:[['ADT concept explained clearly','2'],['Queue operations defined','3'],['Practical application described','2'],['Time complexity analysis','3']] },
+      { text: 'Compare and contrast array-based and linked-list-based implementations of a Stack. Discuss trade-offs in terms of memory usage, time complexity, and practical suitability. Which would you prefer for an undo feature in a text editor, and why?', scheme:[['Array implementation described','2'],['Linked list implementation described','2'],['Trade-off analysis','3'],['Justified recommendation','3']] },
+    ].slice(0, vals.long),
+  };
+}
+function parseLLMOutput(raw, topic) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  const mcq = [], answers = [], short = [], long = [];
+  let section = null, currentQ = null;
+
+  for (const line of lines) {
+    if (line.includes('Section A')) { section = 'mcq'; continue; }
+    if (line.includes('Section B')) { section = 'short'; continue; }
+    if (line.includes('Section C')) { section = 'long'; continue; }
+
+    if (section === 'mcq') {
+      if (/^Q\d+\./.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+\.\s*/, ''), options: {} };
+        mcq.push(currentQ);
+      } else if (/^\(a\)/.test(line)) {
+        const m = line.match(/\(a\)(.*?)\(b\)(.*?)\(c\)(.*?)\(d\)(.*)/i);
+        if (m && currentQ) {
+          currentQ.options = { a:m[1].trim(), b:m[2].trim(), c:m[3].trim(), d:m[4].trim() };
+        }
+      } else if (/^Answer:/i.test(line)) {
+        const m = line.match(/\(([a-d])\)/i);
+        answers.push(m ? m[1].toLowerCase() : '?');
+      }
+    }
+
+    if (section === 'short') {
+      if (/^Q\d+\./.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+\.\s*/, '').replace(/\[5 marks\]/i,'').trim(), scheme:[] };
+        short.push(currentQ);
+      } else if (/^Marking scheme:/i.test(line)) {
+        // next lines are scheme
+      } else if (/^[-•]/.test(line) && currentQ && short.includes(currentQ)) {
+        const m = line.match(/[-•]\s*(.+?)\s*[:\-]\s*(\d+)/);
+        if (m) currentQ.scheme.push([m[1].trim(), m[2]]);
+      }
+    }
+
+    if (section === 'long') {
+      if (/^Q\d+\./.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+\.\s*/, '').replace(/\[10 marks\]/i,'').trim(), scheme:[] };
+        long.push(currentQ);
+      } else if (/^[-•]/.test(line) && currentQ && long.includes(currentQ)) {
+        const m = line.match(/[-•]\s*(.+?)\s*[:\-]\s*(\d+)/);
+        if (m) currentQ.scheme.push([m[1].trim(), m[2]]);
+      }
+    }
+  }
+
+  return { topic, mcq, answers, short, long };
+}
+async function generate() {
+  const btn = document.getElementById('gen-btn');
+  const spin = document.getElementById('spin');
+  const label = document.getElementById('gen-label');
+
+  btn.disabled = true;
+  spin.style.display = 'block';
+  label.textContent = 'Generating…';
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('paper-output').classList.remove('visible');
+  document.getElementById('loading-state').classList.add('visible');
+  startLoader();
+
+  // Simulate API call delay (replace this with your actual fetch to Python backend)
+  await new Promise(r => setTimeout(r, 2800));
+
+  stopLoader();
+  document.getElementById('loading-state').classList.remove('visible');
+
+ const res = await fetch('http://localhost:8000/generate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    topic: document.getElementById('topic').value,
+    difficulty: diff,
+    num_mcq: vals.mcq,
+    num_short: vals.short,
+    num_long: vals.long,
+    rubric: [...active]
+  })
+});
+const json = await res.json();
+const data = parseLLMOutput(json.raw, json.topic);
+  renderPaper(data);
+
+  btn.disabled = false;
+  spin.style.display = 'none';
+  label.textContent = 'Generate Paper';
+  showToast('Paper generated successfully');
+}
+
+function copyPaper() {
+  const topic = document.getElementById('topic').value;
+  const total = vals.mcq + vals.short*5 + vals.long*10;
+  const text = `QUESTION PAPER\nTopic: ${topic}\nDifficulty: ${diff}\nTotal Marks: ${total}\n\n[Copy from the rendered paper above]`;
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+}
+
+// Init
+buildRubric();
+updateMarks();
+</script>
+</body>
+</html>
