@@ -690,7 +690,7 @@ body::before {
     </div>
 
     <div class="section">
-      <div class="section-label">IIT-Style Rubric Criteria</div>
+      <div class="section-label">QUESTION STYLE PREFERENCES</div>
       <div class="rubric-grid" id="rubric-grid"></div>
     </div>
 
@@ -1003,52 +1003,73 @@ function mockGenerate() {
 }
 function parseLLMOutput(raw, topic) {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-
   const mcq = [], answers = [], short = [], long = [];
-  let section = null, currentQ = null;
+  let section = null, currentQ = null, inScheme = false;
 
-  for (const line of lines) {
-    if (line.includes('Section A')) { section = 'mcq'; continue; }
-    if (line.includes('Section B')) { section = 'short'; continue; }
-    if (line.includes('Section C')) { section = 'long'; continue; }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/Section A|Multiple Choice/i.test(line)) { section='mcq'; currentQ=null; continue; }
+    if (/Section B|Short Answer/i.test(line))     { section='short'; currentQ=null; continue; }
+    if (/Section C|Long Answer|Essay/i.test(line)) { section='long'; currentQ=null; continue; }
 
     if (section === 'mcq') {
-      if (/^Q\d+\./.test(line)) {
-        currentQ = { text: line.replace(/^Q\d+\.\s*/, ''), options: {} };
+      if (/^Q\d+[.)]/i.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+[.)]\s*/i,'').replace(/\[.*?\]/g,'').trim(), options:{} };
         mcq.push(currentQ);
-      } else if (/^\(a\)/.test(line)) {
-        const m = line.match(/\(a\)(.*?)\(b\)(.*?)\(c\)(.*?)\(d\)(.*)/i);
-        if (m && currentQ) {
-          currentQ.options = { a:m[1].trim(), b:m[2].trim(), c:m[3].trim(), d:m[4].trim() };
-        }
-      } else if (/^Answer:/i.test(line)) {
-        const m = line.match(/\(([a-d])\)/i);
+        inScheme = false;
+
+      // Options all on ONE line: (a) foo  (b) bar  (c) baz  (d) qux
+      } else if (currentQ && /\(a\).*\(b\).*\(c\).*\(d\)/i.test(line)) {
+        const m = line.match(/\(a\)\s*(.*?)\s*\(b\)\s*(.*?)\s*\(c\)\s*(.*?)\s*\(d\)\s*(.*)/i);
+        if (m) currentQ.options = { a:m[1].trim(), b:m[2].trim(), c:m[3].trim(), d:m[4].trim() };
+
+      // Options each on SEPARATE lines
+      } else if (currentQ && /^\(a\)/i.test(line)) {
+        currentQ.options.a = line.replace(/^\(a\)\s*/i,'').trim();
+      } else if (currentQ && /^\(b\)/i.test(line)) {
+        currentQ.options.b = line.replace(/^\(b\)\s*/i,'').trim();
+      } else if (currentQ && /^\(c\)/i.test(line)) {
+        currentQ.options.c = line.replace(/^\(c\)\s*/i,'').trim();
+      } else if (currentQ && /^\(d\)/i.test(line)) {
+        currentQ.options.d = line.replace(/^\(d\)\s*/i,'').trim();
+
+      } else if (/^Answer\s*:/i.test(line)) {
+        const m = line.match(/\(([a-d])\)/i) || line.match(/Answer\s*:\s*([a-d])\b/i);
         answers.push(m ? m[1].toLowerCase() : '?');
       }
     }
 
     if (section === 'short') {
-      if (/^Q\d+\./.test(line)) {
-        currentQ = { text: line.replace(/^Q\d+\.\s*/, '').replace(/\[5 marks\]/i,'').trim(), scheme:[] };
+      if (/^Q\d+[.)]/i.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+[.)]\s*/i,'').replace(/\[.*?\]/g,'').trim(), scheme:[] };
         short.push(currentQ);
-      } else if (/^Marking scheme:/i.test(line)) {
-        // next lines are scheme
-      } else if (/^[-•]/.test(line) && currentQ && short.includes(currentQ)) {
-        const m = line.match(/[-•]\s*(.+?)\s*[:\-]\s*(\d+)/);
+        inScheme = false;
+      } else if (currentQ && /^Marking scheme/i.test(line)) {
+        inScheme = true;
+      } else if (currentQ && inScheme && /^[-•–]\s*/.test(line)) {
+        const m = line.match(/^[-•–]\s*(.+?)\s*:\s*(\d+)/);
         if (m) currentQ.scheme.push([m[1].trim(), m[2]]);
       }
     }
 
     if (section === 'long') {
-      if (/^Q\d+\./.test(line)) {
-        currentQ = { text: line.replace(/^Q\d+\.\s*/, '').replace(/\[10 marks\]/i,'').trim(), scheme:[] };
+      if (/^Q\d+[.)]/i.test(line)) {
+        currentQ = { text: line.replace(/^Q\d+[.)]\s*/i,'').replace(/\[.*?\]/g,'').trim(), scheme:[] };
         long.push(currentQ);
-      } else if (/^[-•]/.test(line) && currentQ && long.includes(currentQ)) {
-        const m = line.match(/[-•]\s*(.+?)\s*[:\-]\s*(\d+)/);
+        inScheme = false;
+      } else if (currentQ && /^Marking scheme/i.test(line)) {
+        inScheme = true;
+      } else if (currentQ && inScheme && /^[-•–]\s*/.test(line)) {
+        const m = line.match(/^[-•–]\s*(.+?)\s*:\s*(\d+)/);
         if (m) currentQ.scheme.push([m[1].trim(), m[2]]);
       }
     }
   }
+
+  // Fallbacks if scheme didn't parse
+  short.forEach(q => { if (!q.scheme.length) q.scheme = [['Key concept','2'],['Supporting detail','2'],['Example','1']]; });
+  long.forEach(q  => { if (!q.scheme.length) q.scheme = [['Conceptual understanding','3'],['Detailed explanation','3'],['Application','2'],['Clarity','2']]; });
 
   return { topic, mcq, answers, short, long };
 }

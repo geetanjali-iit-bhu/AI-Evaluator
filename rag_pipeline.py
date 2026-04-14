@@ -89,7 +89,7 @@ def _build_prompt(
         if c in ALL_RUBRIC_CRITERIA
     )
     rubric_block = f"""
-RUBRIC CRITERIA (IIT-style — apply strictly across all questions):
+QUESTION STYLE PREFERENCES (use these to shape question types):
 {rubric_lines}
 """.strip()
 
@@ -115,6 +115,29 @@ SECTION-SPECIFIC INSTRUCTIONS:
 - Short answer: {profile['short_instruction']}
 - Long answer:  {profile['long_instruction']}
 
+MARKING SCHEME REQUIREMENT (mandatory for every short and long answer question):
+For EVERY short answer question, immediately after the question write:
+Marking scheme:
+  - <specific criterion from this question> : <marks>
+  - <specific criterion from this question> : <marks>
+  - <specific criterion from this question> : <marks>
+  (must add up to 5 marks exactly)
+
+For EVERY long answer question, immediately after the question write:
+Marking scheme:
+  - <specific criterion from this question> : <marks>
+  - <specific criterion from this question> : <marks>
+  - <specific criterion from this question> : <marks>
+  - <specific criterion from this question> : <marks>
+  (must add up to 10 marks exactly)
+
+Criteria must be SPECIFIC to each question — not generic labels like "clarity" or "understanding".
+Example for a question about AVL rotations:
+  - Balance factor definition correct : 2
+  - LL and RR rotation steps shown : 3
+  - LR and RL rotation explained : 3
+  - Time complexity stated : 2
+
 TASK:
 Generate a question paper on the topic: "{topic}"
 
@@ -134,7 +157,11 @@ Q1. <question>
 
 --- Section B: Short Answer Questions ({num_short} Questions × 5 Marks = {num_short * 5} Marks) ---
 Q{num_mcq + 1}. <question>  [5 marks]
-Marking scheme: <brief 2-line rubric for awarding marks>
+Marking scheme:
+  - <specific criterion> : <marks>
+  - <specific criterion> : <marks>
+  - <specific criterion> : <marks>
+  (total: 5 marks)
 
 [repeat for remaining short answer questions]
 
