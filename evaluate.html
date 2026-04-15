@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ExamForge — Evaluation</title>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono&family=Instrument+Sans&display=swap" rel="stylesheet">
+
+<style>
+body {
+  background:#0e0f11;
+  color:#f0ede8;
+  font-family:Instrument Sans;
+  padding:40px;
+}
+
+.card {
+  background:#16181c;
+  border:1px solid #2a2d35;
+  border-radius:12px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+textarea {
+  width:100%;
+  height:140px;
+  background:#1e2026;
+  border:1px solid #363a45;
+  color:white;
+  padding:12px;
+  border-radius:8px;
+}
+
+button {
+  background:#e8d5a3;
+  border:none;
+  padding:10px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.result {
+  margin-top:20px;
+  padding:15px;
+  border-left:3px solid #4ade80;
+  background:#0d2318;
+}
+.bad {
+  border-left:3px solid #f87171;
+  background:#2a0d0d;
+}
+</style>
+</head>
+
+<body>
+
+<div style="
+  position:fixed;
+  top:18px;
+  right:18px;
+  z-index:999;
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:8px 12px;
+  border-radius:10px;
+  font-family:'DM Mono';
+  font-size:12px;
+">
+  <a href="/" style="color:var(--accent);text-decoration:none;">
+    Generate
+  </a>
+  <span style="color:var(--text3)"> | </span>
+  <a href="/evaluate-page" style="color:var(--text2);text-decoration:none;">
+    Evaluate
+  </a>
+</div>
+
+<h1 style="font-family:DM Serif Display;color:#e8d5a3">
+ExamForge Evaluation
+</h1>
+
+<div class="card">
+  <h3>Question</h3>
+  <textarea id="question"></textarea>
+</div>
+
+<div class="card">
+  <h3>Student Answer</h3>
+  <textarea id="answer"></textarea>
+</div>
+
+<div class="card">
+  <h3>Topic</h3>
+  <input id="topic" style="width:100%;padding:10px;background:#1e2026;color:white;border:1px solid #363a45;border-radius:8px">
+</div>
+
+<button onclick="evaluateAnswer()">Evaluate</button>
+
+<div id="output"></div>
+
+<script>
+async function evaluateAnswer() {
+  const res = await fetch("http://localhost:8000/evaluate", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      question: document.getElementById("question").value,
+      answer: document.getElementById("answer").value,
+      topic: document.getElementById("topic").value,
+      max_marks: 5
+    })
+  });
+
+  const data = await res.json();
+  const out = document.getElementById("output");
+
+  if(data.error){
+    out.innerHTML = `<div class="result bad">
+      ❌ Error: ${data.error}<br><br>
+      <pre>${JSON.stringify(data.raw, null, 2)}</pre>
+    </div>`;
+    return;
+  }
+
+  let breakdown = "";
+  if(data.breakdown){
+    breakdown = data.breakdown.map(b =>
+      `<li>${b.criterion} → ${b.marks_awarded} (${b.reason})</li>`
+    ).join("");
+  }
+
+  out.innerHTML = `
+    <div class="result">
+      <h3>Score: ${data.score} / ${data.max_score}</h3>
+      <p>${data.feedback}</p>
+      <h4>Breakdown</h4>
+      <ul>${breakdown}</ul>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
